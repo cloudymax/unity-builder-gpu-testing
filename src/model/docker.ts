@@ -48,13 +48,49 @@ class Docker {
     if (!existsSync(githubWorkflow)) mkdirSync(githubWorkflow);
     const commandPrefix = image === `alpine` ? `/bin/sh` : `/bin/bash`;
 
-    return `docker run --runtime=nvidia --gpus all nvidia/cuda:11.6.2-base-ubuntu20.04 nvidia-smi`;
+    return `docker run \
+            --workdir ${dockerWorkspacePath} \
+            --rm \
+            ${ImageEnvironmentFactory.getEnvVarString(parameters, additionalVariables)} \
+            --env UNITY_SERIAL \
+            --env GITHUB_WORKSPACE=${dockerWorkspacePath} \
+            ${gitPrivateToken ? `--env GIT_PRIVATE_TOKEN="${gitPrivateToken}"` : ''} \
+            ${sshAgent ? '--env SSH_AUTH_SOCK=/ssh-agent' : ''} \
+            --volume "${githubHome}":"/root:z" \
+            --volume "${githubWorkflow}":"/github/workflow:z" \
+            --volume "${workspace}":"${dockerWorkspacePath}:z" \
+            --volume "${actionFolder}/default-build-script:/UnityBuilderAction:z" \
+            --volume "${actionFolder}/platforms/ubuntu/steps:/steps:z" \
+            --volume "${actionFolder}/platforms/ubuntu/entrypoint.sh:/entrypoint.sh:z" \
+            --volume "${actionFolder}/unity-config:/usr/share/unity3d/config/:z" \
+            ${sshAgent ? `--volume ${sshAgent}:/ssh-agent` : ''} \
+            ${sshAgent ? '--volume /home/runner/.ssh/known_hosts:/root/.ssh/known_hosts:ro' : ''} \
+            ${entrypointBash ? `--entrypoint ${commandPrefix}` : ``} \
+            ${image} \
+            ${entrypointBash ? `-c` : `${commandPrefix} -c`} \
+            "${overrideCommands !== '' ? overrideCommands : `/entrypoint.sh`}"`;
   }
 
   static getWindowsCommand(image: string, parameters: DockerParameters): string {
     const { workspace, actionFolder, unitySerial, gitPrivateToken, dockerWorkspacePath } = parameters;
 
-    return `docker run --runtime=nvidia --gpus all nvidia/cuda:11.6.2-base-ubuntu20.04 nvidia-smi`;
+    return `docker run \
+            --workdir c:${dockerWorkspacePath} \
+            --rm \
+            ${ImageEnvironmentFactory.getEnvVarString(parameters)} \
+            --env UNITY_SERIAL="${unitySerial}" \
+            --env GITHUB_WORKSPACE=c:${dockerWorkspacePath} \
+            ${gitPrivateToken ? `--env GIT_PRIVATE_TOKEN="${gitPrivateToken}"` : ''} \
+            --volume "${workspace}":"c:${dockerWorkspacePath}" \
+            --volume "c:/regkeys":"c:/regkeys" \
+            --volume "C:/Program Files (x86)/Microsoft Visual Studio":"C:/Program Files (x86)/Microsoft Visual Studio" \
+            --volume "C:/Program Files (x86)/Windows Kits":"C:/Program Files (x86)/Windows Kits" \
+            --volume "C:/ProgramData/Microsoft/VisualStudio":"C:/ProgramData/Microsoft/VisualStudio" \
+            --volume "${actionFolder}/default-build-script":"c:/UnityBuilderAction" \
+            --volume "${actionFolder}/platforms/windows":"c:/steps" \
+            --volume "${actionFolder}/BlankProject":"c:/BlankProject" \
+            ${image} \
+            powershell c:/steps/entrypoint.ps1`;
   }
 }
 
