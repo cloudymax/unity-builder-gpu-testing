@@ -20,6 +20,10 @@ source /steps/return_license.sh
 # Remove license activation directory
 #
 
+sleep 5
+echo "$ACTIVATE_LICENSE_PATH"
+ls "$ACTIVATE_LICENSE_PATH"
+sleep 5
 rm -r "$ACTIVATE_LICENSE_PATH"
 
 #
