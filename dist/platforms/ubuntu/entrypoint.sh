@@ -30,6 +30,7 @@ rm -r "$ACTIVATE_LICENSE_PATH"
 # Instructions for debugging
 #
 
+sleep 5
 if [[ $BUILD_EXIT_CODE -gt 0 ]]; then
 echo ""
 echo "###########################"
@@ -47,4 +48,5 @@ fi;
 # Exit with code from the build step.
 #
 
+sleep 5
 exit $BUILD_EXIT_CODE
